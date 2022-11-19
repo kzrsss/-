@@ -1,63 +1,49 @@
 package main
 
-import "time"
+import (
+	"github.com/gin-gonic/gin"
+)
 
-import "fmt"
+var a [100]person
+var m int = 0
+var t int = 0
+var h bool
 
+type person struct {
+	Name     string `json:"Name"`
+	Possword string `json:"Possword"`
+}
+
+// 定义了一个结构体
 func main() {
+	r := gin.Default() //打开引擎
 
-	//新建计时器，两秒以后触发，go触发计时器的方法比较特别，就是在计时器的channel中发送值
+	r.POST("/pin", func(c *gin.Context) {
+		c.ShouldBind(&a[t])
+		c.JSON(200, a[t])
+		t++
+	})
 
-	timer1 := time.NewTimer(time.Second * 2)
-
-	//此处在等待channel中的信号，执行此段代码时会阻塞两秒
-
-	<-timer1.C
-
-	fmt.Println("Timer 1 expired")
-
-	//新建计时器，一秒后触发
-
-	timer2 := time.NewTimer(time.Second)
-
-	//新开启一个线程来处理触发后的事件
-
-	go func() {
-
-		//等触发时的信号
-
-		<-timer2.C
-
-		fmt.Println("Timer 2 expired")
-
-	}()
-
-	//由于上面的等待信号是在新线程中，所以代码会继续往下执行，停掉计时器
-
-	stop2 := timer2.Stop()
-
-	if stop2 {
-
-		fmt.Println("Timer 2 stopped")
-
-	}
-	go func() {
-		for t := range time.Tick(time.Minute) {
-			fmt.Println("Tick at", t)
+	//启动注册服务路径为/pin
+	r.POST("/c", func(c *gin.Context) {
+		var x person
+		c.ShouldBind(&x)
+		h = false
+		for f := 0; f <= t; f++ {
+			if x.Possword == a[f].Possword || x.Name == a[f].Name {
+				f = t + 1
+				h = true
+			}
 		}
-	}()
 
-	// 使用time.Ticker
-	var ticker *time.Ticker = time.NewTicker(1 * time.Second)
-
-	go func() {
-		for t := range ticker.C {
-			fmt.Println("Tick at", t)
+		//开启登录服务路径为/c
+		if h == true {
+			c.JSON(200, x)
+		} else {
+			c.String(200, "密码错误")
 		}
-	}()
+	})
 
-	time.Sleep(time.Second * 5)
-	ticker.Stop()
-	fmt.Println("Ticker stopped")
-
+	//密码服务
+	r.Run()
 }
