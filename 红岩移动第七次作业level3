@@ -1,0 +1,181 @@
+package com.example.networkjsontest313.util;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class NetUtil {
+
+    public static String BASE_URL = "https://www.wanandroid.com//hotkey/json";
+    public static String APP_ID = "36646344";
+    public static String APP_SECRET = "c1lgQbP9";
+
+    public static String doGet(String url) {
+        HttpURLConnection urlConnection = null;
+        BufferedReader reader = null;
+        String bookJSONString = null;
+
+        try {
+            // 1.建立连接
+            URL requestURL = new URL(url);
+            urlConnection = (HttpURLConnection) requestURL.openConnection();
+            urlConnection.setRequestMethod("GET");
+            urlConnection.setConnectTimeout(5000);
+            urlConnection.setRequestProperty("Charset", "utf-8");
+            urlConnection.connect();
+
+            // 2.从连接里获取输入流（二进制）
+            InputStream inputStream = urlConnection.getInputStream();
+
+            // 3.将输入流包装转换成 BufferedReader （我们人易懂的文本）
+            reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+
+            // 4.从 BufferedReader 中一行行读取字符串,用 StringBuilder 接收
+            StringBuilder builder = new StringBuilder();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+//                builder.append("\n");
+            }
+
+            if (builder.length() == 0) {
+                return null;
+            }
+
+            // 5.StringBuilder拼接成最终的字符串文本
+            bookJSONString = builder.toString();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // 关闭连接
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return bookJSONString;
+    }
+
+
+    public static boolean doPost(String urlStr) {
+        HttpURLConnection urlConnection = null;
+        OutputStream outputStream = null;
+
+        boolean result = false;
+
+        try {
+            URL url = new URL(urlStr);
+            // 1. 打开连接
+            urlConnection = (HttpURLConnection) url.openConnection();
+            // 2.准备请求数据
+            Map<String, String> paramMap = new HashMap<>();
+            paramMap.put("userName", "fxj");
+            paramMap.put("pass", "123");
+            String paramData = paramMapToString(paramMap);
+            // 3.设置连接信息
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setConnectTimeout(10 * 1000);
+            urlConnection.setRequestProperty("Content-Length", String.valueOf(paramData.length()));
+            // 设置conn可以向服务端输出内容
+            urlConnection.setDoOutput(true);
+            // 4.获取输出流，并进行输出
+            outputStream = urlConnection.getOutputStream();
+            outputStream.write(paramData.getBytes());
+            // 5.获取服务端的响应结果
+            int code = urlConnection.getResponseCode();
+            if (code == 200) {
+                result = true;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return result;
+
+    }
+
+    public static String paramMapToString(Map<String, String> paramMap) {
+        StringBuilder sb = new StringBuilder();
+
+        Set<Map.Entry<String, String>> entries = paramMap.entrySet();
+
+        for (Map.Entry<String, String> entry :
+                entries) {
+            sb.append(entry.getKey())
+                    .append("=")
+                    .append(entry.getValue())
+                    .append("&");
+        }
+
+        // 去掉最后一个&
+        sb.deleteCharAt(sb.length() - 1);
+
+        return sb.toString();
+
+    }
+
+
+    public static String getWeatherOfCity(String city) {
+        // 拼接出get请求的url
+        String weatherUrl = BASE_URL + "?" + "appid=" + APP_ID + "&" + "appsecret=" + APP_SECRET + "&city=" + city;
+
+        String weatherResult = doGet(weatherUrl);
+        return decodeUnicode(weatherResult);
+    }
+
+
+    public static String decodeUnicode(String unicodeStr) {
+        if (unicodeStr == null) {
+            return null;
+        }
+        StringBuffer retBuf = new StringBuffer();
+        int maxLoop = unicodeStr.length();
+        for (int i = 0; i < maxLoop; i++) {
+            if (unicodeStr.charAt(i) == '\\') {
+                if ((i < maxLoop - 5) && ((unicodeStr.charAt(i + 1) == 'u') || (unicodeStr.charAt(i + 1) == 'U')))
+                    try {
+                        retBuf.append((char) Integer.parseInt(unicodeStr.substring(i + 2, i + 6), 16));
+                        i += 5;
+                    } catch (NumberFormatException localNumberFormatException) {
+                        retBuf.append(unicodeStr.charAt(i));
+                    }
+                else
+                    retBuf.append(unicodeStr.charAt(i));
+            } else {
+                retBuf.append(unicodeStr.charAt(i));
+            }
+        }
+        return retBuf.toString();
+    }
+
+}
