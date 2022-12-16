@@ -1,0 +1,115 @@
+package com.example.networkjsontest313;
+
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.networkjsontest313.util.NetUtil;
+import com.google.gson.Gson;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView tvContent;
+    private TextView tvWeather;
+
+
+    private Handler mHandler = new Handler(Looper.myLooper()){
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+
+            if (msg.what == 0) {
+                String strData = (String) msg.obj;
+                tvContent.setText(strData);
+                parseJsonDataAndShow(strData);
+
+                Toast.makeText(MainActivity.this,"主线程收到来自网络的消息啦！",Toast.LENGTH_SHORT).show();
+            }
+
+        }
+    };
+
+
+    public void parseJsonDataAndShow(String jsonStr) {
+
+        try {
+            JSONObject jsonObject = new JSONObject(jsonStr);
+            String name= jsonObject.optString("name");
+
+
+            // 显示json数据
+            getSupportActionBar().setTitle("Data");
+
+            tvWeather.setText(name);
+
+
+
+            Gson gson = new Gson();
+            // 把json字符串直接转换成JavaBean对象
+            WeatherBean weatherBean = gson.fromJson(jsonStr, WeatherBean.class);
+
+            // 把JavaBean对象转换成json字符串
+            String jsonWeather = gson.toJson(weatherBean);
+
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        tvContent = findViewById(R.id.tv_content);
+
+        tvWeather = findViewById(R.id.tv_weather);
+
+
+
+    }
+
+    public void start(View view) {
+
+        // 做一个耗时任务
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String stringFromNet = getStringFromNet();
+
+                Message message = new Message();
+                message.what = 0;
+                message.obj = stringFromNet;
+
+                mHandler.sendMessage(message);
+
+            }
+        }).start();
+
+        Toast.makeText(this,"开启子线程请求网络！",Toast.LENGTH_SHORT).show();
+
+    }
+
+
+    private String getStringFromNet() {
+        return NetUtil.getWeatherOfCity("Data");
+    }
+
+
+
+}
